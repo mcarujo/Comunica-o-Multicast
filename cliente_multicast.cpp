@@ -16,10 +16,11 @@
 #include <stdio.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <time.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <time.h>
-
+#include <string.h>
 
 #define MULTICAST_ADDR "225.0.0.37"
 
@@ -34,7 +35,7 @@ int main( )
     
     unsigned short porta = 9734;
     
-    sockfd  = socket(AF_INET, SOCK_DGRAM,0);  // criacao do socket
+    client_sockfd  = socket(AF_INET, SOCK_DGRAM,0);  // criacao do socket
     
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = inet_addr(MULTICAST_ADDR);
@@ -45,9 +46,9 @@ int main( )
     
     for(int i=0;i<10;i++)
     {
-        sendto(sockfd, &i,sizeof(i),0,(struct sockaddr *) &address, len);
+        sendto(client_sockfd, &i,sizeof(i),0,(struct sockaddr *) &address, len);
         sleep(1);
     }
-    close(sockfd);
+    close(client_sockfd);
     exit(0);
 }

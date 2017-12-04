@@ -18,23 +18,67 @@
 #include <unistd.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 
 #define MULTICAST_ADDR "225.0.0.37"
+void *thread_enviar(void *valor);
+void *thread_receber(void *valor);
+pthread_t servidor, cliente;
+int server_sockfd, client_sockfd;
+size_t server_len;
+socklen_t client_len;
+struct sockaddr_in server_address;
+struct sockaddr_in client_address;
+
+struct ip_mreq mreq;  // para endere�o multicast
+
+unsigned short porta = 9734;
 
 
 int main( )
 {
-    int server_sockfd, client_sockfd;
-    size_t server_len;
-    socklen_t client_len;
-    struct sockaddr_in server_address;
-    struct sockaddr_in client_address;
-    
-    struct ip_mreq mreq;  // para endere�o multicast
-    
-    unsigned short porta = 9734;
-    
+    int res;
+   
+	void *thread_result;
+	printf("Programa principal criando thread servidor...\n");
+	res = pthread_create(&servidor, NULL, thread_receber, (void *) 1);
+	if (res != 0)
+	{
+	    perror("A Craição da Thread servidor falhou");
+	    exit(EXIT_FAILURE);
+	}
+
+	printf("Programa principal criando thread cliente...\n");
+	res = pthread_create(&cliente, NULL, thread_enviar, (void *) 2);
+	if (res != 0)
+	{
+	    perror("A Craição da Thread cliente falhou");
+	    exit(EXIT_FAILURE);
+	}
+	
+    printf("\nMAIN()--> Aguardando a THREAD terminar servidor...\n");
+    res = pthread_join(servidor, &thread_result);
+    if (res != 0) {
+        perror("Thread join failed");
+        exit(EXIT_FAILURE);
+    }
+
+     printf("\nMAIN()--> Aguardando a THREAD terminar cliente...\n");
+    res = pthread_join(cliente, &thread_result);
+    if (res != 0) {
+        perror("Thread join failed");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("MAIN() --> TODAS AS THREADS terminaram\n");
+
+    exit(EXIT_SUCCESS);     
+}
+
+void *thread_receber(void *valor)
+{
+   
     unlink("server_socket");  // remocao de socket antigo
     if ( (server_sockfd = socket(AF_INET, SOCK_DGRAM, 0) )  < 0  )  // cria um novo socket
     {
@@ -65,8 +109,7 @@ int main( )
     printf(" IPPROTO_IP = %d\n", IPPROTO_IP);
     printf(" SOL_SOCKET = %d\n", SOL_SOCKET);
     printf(" IP_ADD_MEMBERSHIP = %d \n", IP_ADD_MEMBERSHIP);
-    
-    
+
     while(1){
         int valor;
         
@@ -80,7 +123,28 @@ int main( )
             exit(1);
         }
         printf(" Valor recebido foi = %d\n", valor);
-        // close(server_sockfd);
+        
+    }
+}
+
+void *thread_enviar(void *valor)
+{
+    while(1){
+       client_sockfd  = socket(AF_INET, SOCK_DGRAM,0);  // criacao do socket
+    
+    client_address.sin_family = AF_INET;
+    client_address.sin_addr.s_addr = inet_addr(MULTICAST_ADDR);
+
+    client_address.sin_port = htons(porta);
+    
+    client_len = sizeof(client_address);
+    
+    for(int i=0;i<10;i++)
+    {
+        printf(" Valor enviado foi = %d\n", i);
+        sendto(client_sockfd, &i,sizeof(i),0,(struct sockaddr *) &client_address, client_len);
+        sleep(1);
+    }
         
     }
 }
