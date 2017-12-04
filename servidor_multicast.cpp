@@ -32,15 +32,15 @@ struct sockaddr_in server_address;
 struct sockaddr_in client_address;
 
 struct ip_mreq mreq;  // para endere�o multicast
-
-unsigned short porta = 9734;
+int valor;
+unsigned short porta = 9709;
 
 
 int main( )
 {
     int res;
-   
-	void *thread_result;
+
+    void *thread_result;
 	printf("Programa principal criando thread servidor...\n");
 	res = pthread_create(&servidor, NULL, thread_receber, (void *) 1);
 	if (res != 0)
@@ -78,7 +78,6 @@ int main( )
 
 void *thread_receber(void *valor)
 {
-   
     unlink("server_socket");  // remocao de socket antigo
     if ( (server_sockfd = socket(AF_INET, SOCK_DGRAM, 0) )  < 0  )  // cria um novo socket
     {
@@ -89,7 +88,6 @@ void *thread_receber(void *valor)
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
     server_address.sin_port = htons(porta);
     
-    
     server_len = sizeof(server_address);
     
     if(  bind(server_sockfd, (struct sockaddr *) &server_address, server_len) < 0 )
@@ -98,8 +96,6 @@ void *thread_receber(void *valor)
         exit(1);
     }
     
-    
-    // use setsockopt() para requerer inscri��o num grupo multicast
     mreq.imr_multiaddr.s_addr=inet_addr(MULTICAST_ADDR);
     mreq.imr_interface.s_addr=htonl(INADDR_ANY);
     if (setsockopt(server_sockfd,IPPROTO_IP,IP_ADD_MEMBERSHIP,&mreq,sizeof(mreq)) < 0) {
@@ -111,40 +107,30 @@ void *thread_receber(void *valor)
     printf(" IP_ADD_MEMBERSHIP = %d \n", IP_ADD_MEMBERSHIP);
 
     while(1){
-        int valor;
-        
         printf("Servidor esperando ...\n");
         
-        client_len = sizeof(client_address);
-        if(recvfrom(server_sockfd, &valor, sizeof(valor),0,
-                    (struct sockaddr *) &client_address, &client_len) < 0 )
+        client_len = sizeof(server_address);
+        if(recvfrom(server_sockfd, &valor, sizeof(valor),0,(struct sockaddr *) &server_address, &client_len) < 0 )
         {
             perror(" erro no RECVFROM( )");
             exit(1);
         }
         printf(" Valor recebido foi = %d\n", valor);
-        
     }
 }
 
 void *thread_enviar(void *valor)
 {
-    while(1){
-       client_sockfd  = socket(AF_INET, SOCK_DGRAM,0);  // criacao do socket
-    
+    client_sockfd  = socket(AF_INET, SOCK_DGRAM,0);  // criacao do socket
     client_address.sin_family = AF_INET;
     client_address.sin_addr.s_addr = inet_addr(MULTICAST_ADDR);
-
     client_address.sin_port = htons(porta);
-    
     client_len = sizeof(client_address);
     
-    for(int i=0;i<10;i++)
+    while(1);
     {
-        printf(" Valor enviado foi = %d\n", i);
-        sendto(client_sockfd, &i,sizeof(i),0,(struct sockaddr *) &client_address, client_len);
+        printf(" Valor enviado foi = %d\n", valor);
+        sendto(client_sockfd, &valor,sizeof(valor),0,(struct sockaddr *) &client_address, client_len);
         sleep(1);
-    }
-        
     }
 }
